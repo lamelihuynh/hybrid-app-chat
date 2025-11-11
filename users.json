@@ -1,0 +1,23 @@
+{
+  "admin": {
+    "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "email": "admin@hcmut.edu.vn",
+    "full_name": "",
+    "created_at": 1762756684.954676,
+    "is_active": true
+  },
+  "user1": {
+    "password_hash": "0b14d501a594442a01c6859541bcb3e8164d183d32937b851835442f69d5c94e",
+    "email": "user1@hcmut.edu.vn",
+    "full_name": "",
+    "created_at": 1762756684.9548988,
+    "is_active": true
+  },
+  "nhatlinh": {
+    "password_hash": "2d0c6e5861d114fe7e617ae9e1b8927f9eb481eee5ef8245be442e5542c2a4dd",
+    "email": "linh@hcmut.edu.vn",
+    "full_name": "",
+    "created_at": 1762756684.955117,
+    "is_active": true
+  }
+}
