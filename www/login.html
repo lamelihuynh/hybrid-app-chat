@@ -1,8 +1,186 @@
-<html><body>
-<h1>Login</h1>
-<form method="POST" action="/login">
-  Username: <input name="username" type="text"><br>
-  Password: <input name="password" type="password"><br>
-  <input type="submit" value="Login">
-</form>
-</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - bksysnet@hcmut</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .login-container {
+            border: 1px solid #ccc;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            display: none;
+        }
+        .error {
+            background-color: #f44336;
+            color: white;
+        }
+        .success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <h1>Login</h1>
+    <div id="message" class="message"></div>
+    
+    <form id="loginForm" method="POST" action="/login">
+        <label for="username">Username:</label>
+        <input id="username" name="username" type="text" required><br>
+        
+        <label for="password">Password:</label>
+        <input id="password" name="password" type="password" required><br>
+        
+        <input type="submit" value="Login">
+    </form>
+    
+    <p style="text-align: center; margin-top: 20px;">
+        <a href="index.html">← Back to Home</a>
+    </p>
+</div>
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const messageDiv = document.getElementById('message');
+        
+        messageDiv.textContent = 'Logging in...';
+        messageDiv.className = 'message';
+        messageDiv.style.display = 'block';
+        
+        fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            }),
+            credentials: 'include'
+        })
+        .then(response => {
+            console.log('[Login] Response status:', response.status);
+            console.log('[Login] Response headers:');
+            
+            // Check Set-Cookie header
+            const setCookie = response.headers.get('Set-Cookie');
+            console.log('[Login] Set-Cookie header:', setCookie);
+            
+            // Get all headers
+            response.headers.forEach((value, key) => {
+                console.log(`  ${key}: ${value}`);
+            });
+            
+            return response.text();
+        })
+        .then(text => {
+            console.log('[Login] Raw response:', text);
+            
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('[Login] JSON parse error:', e);
+                messageDiv.textContent = 'Invalid response from server';
+                messageDiv.className = 'message error';
+                return;
+            }
+            
+            console.log('[Login] Parsed data:', data);
+            
+            // Parse nested JSON body
+            let bodyData = data;
+            if (data.body && typeof data.body === 'string') {
+                try {
+                    bodyData = JSON.parse(data.body);
+                    console.log('[Login] Parsed body:', bodyData);
+                } catch (e) {
+                    console.error('[Login] Body parse error:', e);
+                }
+            }
+            
+            if (bodyData.status === 'success') {
+                messageDiv.textContent = 'Login successful! Redirecting...';
+                messageDiv.className = 'message success';
+                
+                // ✅ LƯU TOKEN THỦ CÔNG VÀO COOKIE
+                const token = bodyData.session_token;
+                console.log('[Login] Setting cookie manually:', token);
+                
+                // Set cookie with JavaScript (fallback)
+                document.cookie = `session_token=${token}; path=/; max-age=3600`;
+                
+                // Verify cookie was set
+                console.log('[Login] Current cookies:', document.cookie);
+                
+                // Lưu vào localStorage (backup)
+                localStorage.setItem('session_token', token);
+                localStorage.setItem('username', bodyData.user.username);
+                
+                // Redirect sau 1 giây
+                setTimeout(() => {
+                    console.log('[Login] Redirecting to dashboard...');
+                    window.location.href = '/dashboard.html';
+                }, 1000);
+            } else {
+                messageDiv.textContent = bodyData.message || 'Login failed!';
+                messageDiv.className = 'message error';
+            }
+        })
+        .catch(error => {
+            console.error('[Login] Error:', error);
+            messageDiv.textContent = 'Connection error. Please try again.';
+            messageDiv.className = 'message error';
+        });
+    });
+
+    
+
+</script>
+</body>
+</html>

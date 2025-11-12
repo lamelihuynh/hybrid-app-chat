@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - bksysnet@hcmut</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .dashboard {
+            border: 1px solid #ccc;
+            padding: 30px;
+            border-radius: 5px;
+        }
+        h1 {
+            color: #333;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn-danger {
+            background-color: #f44336;
+        }
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+        #userInfo {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        #peerList {
+            list-style: none;
+            padding: 0;
+        }
+        #peerList li {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        #debugInfo {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <h1>Welcome, <span id="userInfo">Loading...</span></h1>
+    
+    <!-- Debug Info -->
+    <div class="section">
+        <h3>Debug Info</h3>
+        <div id="debugInfo"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Submit Peer Info</h2>
+        <form id="submitInfoForm">
+            <label>Your IP: <input id="peerIp" type="text" value="127.0.0.1" required></label><br>
+            <label>Your Port: <input id="peerPort" type="number" value="8000" required></label><br>
+            <button type="submit" class="btn">Submit Info</button>
+        </form>
+        <div id="submitMessage"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Active Peers</h2>
+        <button onclick="loadPeerList()" class="btn">Refresh Peer List</button>
+        <ul id="peerList"></ul>
+    </div>
+    
+    <div class="section">
+        <button onclick="logout()" class="btn btn-danger">Logout</button>
+    </div>
+</div>
+
+<script>
+    const debugDiv = document.getElementById('debugInfo');
+    
+    function addDebug(msg) {
+        const time = new Date().toLocaleTimeString();
+        debugDiv.innerHTML += `[${time}] ${msg}<br>`;
+        debugDiv.scrollTop = debugDiv.scrollHeight;
+        console.log(`[Dashboard] ${msg}`);
+    }
+    
+    // Check cookies
+    function checkCookies() {
+        const cookies = document.cookie;
+        addDebug(`Cookies: ${cookies || 'NONE'}`);
+        
+        // Check for session_token
+        const hasSessionToken = cookies.includes('session_token=');
+        addDebug(`Has session_token: ${hasSessionToken}`);
+        
+        if (hasSessionToken) {
+            const match = cookies.match(/session_token=([^;]+)/);
+            if (match) {
+                addDebug(`Token: ${match[1].substring(0, 20)}...`);
+            }
+        }
+        
+        return hasSessionToken;
+    }
+    
+    // Check if user is logged in
+    window.onload = function() {
+        addDebug('Page loaded, checking session...');
+        
+        // Check if cookies exist
+        if (!checkCookies()) {
+            addDebug('ERROR: No session cookie found!');
+            addDebug('Redirecting to login in 3 seconds...');
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 3000);
+            return;
+        }
+        
+        // Try to get user info
+        addDebug('Fetching /get-user-info...');
+        
+        fetch('/get-user-info', {
+            method: 'GET',
+            credentials: 'include', // IMPORTANT: Include cookies
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            addDebug(`Response status: ${response.status}`);
+            addDebug(`Response headers: ${JSON.stringify([...response.headers])}`);
+            
+            if (response.status === 401) {
+                addDebug('UNAUTHORIZED - Invalid session');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
+                return null;
+            }
+            
+            if (response.status === 404) {
+                addDebug('ERROR: /get-user-info API not found!');
+                return null;
+            }
+            
+            return response.text(); // Get raw response first
+        })
+        .then(text => {
+            if (!text) return;
+            
+            addDebug(`Raw response: ${text.substring(0, 100)}...`);
+            
+            // Try to parse JSON
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                addDebug(`ERROR parsing JSON: ${e.message}`);
+                return;
+            }
+            
+            addDebug(`Parsed data: ${JSON.stringify(data)}`);
+            
+            // Handle nested JSON body
+            let userData = data;
+            if (data.body && typeof data.body === 'string') {
+                try {
+                    userData = JSON.parse(data.body);
+                    addDebug(`Parsed body: ${JSON.stringify(userData)}`);
+                } catch (e) {
+                    addDebug(`ERROR parsing body: ${e.message}`);
+                }
+            }
+            
+            if (userData && userData.username) {
+                addDebug(`SUCCESS: Logged in as ${userData.username}`);
+                document.getElementById('userInfo').textContent = userData.username;
+            } else if (userData && userData.error) {
+                addDebug(`ERROR: ${userData.error}`);
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
+            } else {
+                addDebug('ERROR: No username in response');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            addDebug(`FETCH ERROR: ${error.message}`);
+            addDebug(`Stack: ${error.stack}`);
+            alert('Session check failed! Check console.');
+        });
+    };
+    
+    // Submit peer info
+    document.getElementById('submitInfoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addDebug('Submitting peer info...');
+        
+        const ip = document.getElementById('peerIp').value;
+        const port = document.getElementById('peerPort').value;
+        const messageDiv = document.getElementById('submitMessage');
+        
+        fetch('/submit-info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ip: ip, port: parseInt(port) }),
+            credentials: 'include'
+        })
+        .then(response => response.text())
+        .then(text => {
+            addDebug(`Submit response: ${text}`);
+            
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                messageDiv.innerHTML = '<p style="color: red;">Invalid response</p>';
+                return;
+            }
+            
+            let responseData = data;
+            if (data.body && typeof data.body === 'string') {
+                responseData = JSON.parse(data.body);
+            }
+            
+            if (responseData.status === 'success') {
+                messageDiv.innerHTML = '<p style="color: green;">✓ Peer info submitted!</p>';
+                loadPeerList();
+            } else {
+                messageDiv.innerHTML = `<p style="color: red;">✗ ${responseData.message}</p>`;
+            }
+        })
+        .catch(error => {
+            addDebug(`Submit error: ${error.message}`);
+            messageDiv.innerHTML = '<p style="color: red;">Connection error</p>';
+        });
+    });
+    
+    // Load peer list
+    function loadPeerList() {
+        addDebug('Loading peer list...');
+        
+        fetch('/get-list', {
+            credentials: 'include'
+        })
+        .then(response => response.text())
+        .then(text => {
+            addDebug(`Peer list response: ${text}`);
+            
+            // TODO: Parse and display peers
+            const peerList = document.getElementById('peerList');
+            peerList.innerHTML = '<li>No active peers (API not implemented)</li>';
+        })
+        .catch(error => {
+            addDebug(`Load peers error: ${error.message}`);
+        });
+    }
+    
+    // Logout
+    function logout() {
+        addDebug('Logging out...');
+        
+        // Clear cookies client-side
+        document.cookie = 'session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        
+        // Redirect immediately
+        window.location.href = '/login.html';
+    }
+</script>
+</body>
+</html>

@@ -105,6 +105,7 @@ class HttpAdapter:
         # Handle the request
         try: 
             msg = conn.recv(1024).decode()
+            print (msg)
             if not msg or msg.strip() == "":
                 print(f"[HttpAdapter] Empty request from {addr}, closing connection")
                 return
