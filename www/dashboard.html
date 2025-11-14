@@ -94,7 +94,12 @@
         <button onclick="loadPeerList()" class="btn">Refresh Peer List</button>
         <ul id="peerList"></ul>
     </div>
-    
+    <!-- Thêm button vào section -->
+    <div class="section">
+        <h2>Quick Actions</h2>
+        <a href="/channels.html" class="btn">📂 Open Channels</a>
+        <button onclick="loadPeerList()" class="btn">🔄 Refresh Peer List</button>
+    </div>
     <div class="section">
         <button onclick="logout()" class="btn btn-danger">Logout</button>
     </div>
@@ -280,8 +285,62 @@
             addDebug(`Peer list response: ${text}`);
             
             // TODO: Parse and display peers
+            let data; 
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                addDebug(`ERROR parsing JSON: ${e.message}`);
+                    document.getElementById('peerList').innerHTML = '<li>Error parsing JSON</li>';
+                return;
+            }
+            let responseData = data;
+
+            if (data.body && typeof data.body === 'string') {
+            try {
+                responseData = JSON.parse(data.body);
+                addDebug(`Parsed body: ${JSON.stringify(responseData)}`);
+            } catch (e) {
+                addDebug(`ERROR parsing body: ${e.message}`);
+                document.getElementById('peerList').innerHTML = 
+                    '<li style="color: red;">Error parsing body</li>';
+                return;
+            }
+        }
+            
             const peerList = document.getElementById('peerList');
-            peerList.innerHTML = '<li>No active peers (API not implemented)</li>';
+        if (responseData.status === 'success' && responseData.peers) {
+            if (responseData.peers.length === 0) {
+                peerList.innerHTML = '<li>No active peers online</li>';
+                addDebug('No peers found');
+                return;
+            }
+            
+            // Display peers
+            addDebug(`Found ${responseData.peers.length} peer(s)`);
+            
+            peerList.innerHTML = responseData.peers.map(peer => {
+                const registeredTime = new Date(peer.registered_at * 1000).toLocaleTimeString();
+                
+                return `
+                    <li>
+                        <strong>${peer.username}</strong> - ${peer.ip}:${peer.port}
+                        <br>
+                        <small style="color: #666;">Registered at: ${registeredTime}</small>
+                        <br>
+                        <button onclick="addPeerToList('${peer.ip}', ${peer.port})" class="btn" style="padding: 5px 10px; margin-top: 5px;">
+                            ➕ Add to My List
+                        </button>
+                        <button onclick="connectToPeer('${peer.ip}', ${peer.port}, '${peer.username}')" class="btn" style="padding: 5px 10px; margin-top: 5px; background-color: #2196F3;">
+                            🔗 Connect P2P
+                        </button>
+                    </li>
+                `;
+            }).join('');
+            
+        } else {
+            peerList.innerHTML = `<li style="color: red;">Error: ${responseData.message || 'Unknown error'}</li>`;
+            addDebug(`ERROR: ${responseData.message || 'Unknown error'}`);
+        }
         })
         .catch(error => {
             addDebug(`Load peers error: ${error.message}`);

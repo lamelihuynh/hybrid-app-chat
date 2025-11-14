@@ -2,7 +2,7 @@ import json
 from daemon.weaprous import WeApRous
 from daemon.session import session_manager
 from daemon.userdb import user_db
-
+from daemon.channel import channel_manager
 app = WeApRous()
 
 @app.route('/hello', methods=['PUT'])
@@ -17,6 +17,226 @@ def hello(headers, body):
     :param body (str): The request body or message payload.
     """
     return {"message": "Hello my name is NHATLINH"}
+
+
+@app.route('/create-channel', methods=['POST'])
+def create_channel(headers, body):
+    """
+    Create new channel API
+    
+    Request body :
+    {
+        "channel_name" : "general"
+    }
+    """
+    
+    print("[CreateChannel]")
+    try: 
+        cookie = headers.get("cookie", "") 
+        session_token = None
+
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")
+                    session_token = session_token[1]
+                    break
+                
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Unauthorized - Invalid session"
+                })
+            
+            }
+        
+        session = session_manager.get_session(session_token)
+        username = session['username']
+        
+        channel_name = body.get("channel_name")
+
+        if not channel_name:
+            return {
+                "status" : "400",
+                "headers" : {"Content-Type" : "application/json"},
+                "body" : json.dumps({
+                    "status" : "error", 
+                    "message" : "Channel name requirement"}
+                )
+                
+            }
+
+        
+        # Create channel
+        if channel_manager.create_channel(channel_name, username):
+            return {
+                "status": 201, 
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "success",
+                    "message": "Channel created successfully",
+                    "channel": {
+                        "name": channel_name, 
+                        "creator": username,
+                    }
+                })
+            }
+        else:
+            return {
+                "status": 409, 
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Channel have arealdy exist, please change the channel name !"
+                })
+            }
+
+    except Exception as e:
+        print(f"[CreateChannel] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "error",
+                "message": "Internal server error"
+            })
+        }
+
+
+@app.route('/list-channels', methods = ['GET'])
+def list_channels(headers, body):
+    """
+    List all available channels.
+    """
+    print("[ListChannels] Getting all channels..." )
+    
+    try: 
+        channels = channel_manager.list_all_channels()
+        print (channels)
+        print(f"[ListChannels] Found {len(channels)} channels")
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "success",
+                "channels": channels
+            })
+        }
+    except Exception as e:
+        print(f"[ListChannels] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return{
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "error",
+                "message": "Internal server error"
+            })
+        }
+    
+
+
+
+
+
+@app.route('/join-channel', methods = ['POST'] )
+def join_channel(headers, body):
+    """
+    Join Channel API 
+    
+    Request body :
+    {
+        "channel_name" : "general"
+    }
+    """
+    
+    print("[JoinChannel]") 
+    try: 
+        cookie = headers.get("cookie", "") 
+        session_token = None
+
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")
+                    session_token = session_token[1]
+                    break
+                
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Unauthorized - Invalid session"
+                })
+            }
+        
+        session = session_manager.get_session(session_token)
+        username = session['username']
+        
+        channel_name = body.get("channel_name")
+        
+        if not channel_name:
+            return {
+                "status": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Channel name is required"
+                })
+            }
+            
+        # Join channel handle 
+        if channel_manager.join_channel(channel_name, username):
+            members = channel_manager.get_channel_members(channel_name)
+
+            return {
+                "status": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "success",
+                    "message": f"Joined channel '{channel_name}' successfully",
+                    "channel": {
+                        "name": channel_name,
+                        "members": members
+                    }
+                })
+            }
+        else:
+            return {
+                "status": 404,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": f"Channel '{channel_name}'not found"
+                })
+            }
+    except Exception as e:
+        print(f"[JoinChannel] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "error",
+                "message": "Internal server error"
+            })
+        }
+
+
+
+
 
 @app.route("/register", methods=["POST"])
 def register(headers, body):
@@ -159,7 +379,7 @@ def get_user_info_api(headers, body):
     
     try:
         # Lấy session token từ cookie
-        cookie = headers.get("Cookie", "")
+        cookie = headers.get("cookie", "")
         session_token = None
         
         if cookie:
@@ -234,15 +454,17 @@ def submit_info(headers, body):
     print("[SubmitInfo] Body:", body)
 
     try : 
-        cookie = headers.get("Cookie", "") 
+        cookie = headers.get("cookie", "") 
         session_token = None
-        
+
         if cookie: 
             for item in cookie.split(";"): 
                 item = item.strip() 
-                if item.startswith("seesion_token="): 
-                    session_token = item.split("=", 1) 
+                if item.startswith("session_token="): 
+                    session_token = item.split("=") 
+                    session_token = session_token[1]
                     break
+                
         if not session_token:
             print("[SubmitInfo] No session token")
             return {
@@ -286,7 +508,34 @@ def submit_info(headers, body):
             
         # Info of user
         session = session_manager.get_session(session_token)
-        username = session['username']
+        username = 'admin'
+        
+        success = session_manager.submit_peer_info(session_token, peer_ip,peer_port)
+        
+        if success:
+            print(f"[SubmitInfo] Peer registered: {username} @ {peer_ip}:{peer_port}")
+
+            return {
+                "status": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "success",
+                    "message": "Peer info registered successfully",
+                    "peer": {
+                        "username": username,
+                        "ip": peer_ip,
+                        "port": peer_port
+                    }})}
+        else: 
+            return {
+                "status": 500,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Failed to register peer"
+                })
+            }
+            
     except Exception as e:
         print(f"[SubmitInfo] Error: {e}")
         import traceback
@@ -309,11 +558,57 @@ def add_list(headers, body):
     # TODO: Xử lý logic thêm vào danh sách
     return 
 
+
 @app.route('/get-list', methods=['GET'])
 def get_list(headers, body):
-    print("[MyAPI] Getting list.")
-    # TODO: Xử lý logic lấy danh sách
-    return 
+    """
+    Get list of active peers for P2P connection
+    
+    """
+    print("[GetList] Getting active peers...")
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Unauthorized - Invalid session"
+                })
+            }
+        
+        # Get all active peers 
+        peers = session_manager.get_all_peers() 
+        print(f"[GetList] Found {len(peers)} active peers")
+        return {
+            "status": 200,
+            "headers" : {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "success",
+                "peers" : peers,
+                "count":len(peers)
+            })
+        }
+    except Exception as e :
+        print(f"[GetList] Error: {e}")
+        import traceback
+        traceback.print_exc()   
+        return {
+            "status":500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "error",
+                "message": "Internal server error"
+            })
+        }
 
 @app.route('/connect-peer', methods=['POST'])
 def connect_peer(headers, body):

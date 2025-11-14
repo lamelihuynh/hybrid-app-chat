@@ -4,32 +4,46 @@ import threading
 
 class SessionManager:
     """
-    Quản lý session và tracking peers cho P2P application.
+    Manage Session and tracking peers for P2P application.
     """
     def __init__(self):
         self.lock = threading.Lock()
-        # {session_token: session_data}
-        self.sessions = {}
-        # {username: session_token}
-        self.username_to_token = {}
-        # {peer_id: peer_info} - Lưu info từ submit-info
-        self.active_peers = {}
+        self.sessions = {}   # {session_token: {username: created_at}}
+        self.username_to_token = {} # {username: session_token}
+        self.active_peers = {} # {session_token: {username, ip, port, registerd_at}}
+        self.user_peer_lists = {} # {session_token: [{peer_ip, peer_port, added_at}]}
     
     def create_session(self, username):
-        """Tạo session sau khi login thành công"""
+        """
+        Create session after login successfully
+        """
         with self.lock:
+            # Remove old session if exists
+            if username in self.username_to_token: 
+                old_token = self.username_to_token[username]
+                if old_token in self.sessions:
+                    del self.sessions[old_token]
+                if old_token in self.active_peers: 
+                    del self.active_peers[old_token]
+            # Create new session
             session_token = str(uuid.uuid4())
             self.sessions[session_token] = {
                 'username': username,
                 'created_at': time.time(),
                 'last_active': time.time(),
-                'peer_info': None  # Sẽ được cập nhật khi submit-info
+                'peer_info': None  
             }
+            
             self.username_to_token[username] = session_token
+            
+            # Initialize empty peer list
+            self.user_peer_lists[session_token] = [] 
+            
+            print(f"[SessionManager] Session created: {username}: {session_token}")
             return session_token
     
     def validate_session(self, session_token):
-        """Kiểm tra session có hợp lệ không"""
+        """Check if session is valid."""
         with self.lock:
             if session_token in self.sessions:
                 self.sessions[session_token]['last_active'] = time.time()
@@ -37,39 +51,57 @@ class SessionManager:
             return False
     
     def get_session(self, session_token):
-        """Lấy thông tin session"""
+        """Get session info."""
         with self.lock:
             return self.sessions.get(session_token)
     
     def submit_peer_info(self, session_token, peer_ip, peer_port):
         """
-        Lưu thông tin peer từ submit-info API.
-        Đây là IP/port mà peer sẽ lắng nghe cho P2P connection.
+        Submit peer P2P info (IP:Port of P2P listener)
+        
+        :param session_token:  Session token
+        :param peer_ip: IP of P2P listener
+        :param peer_port: Port of P2P listener
+        :return: True if successful
         """
         with self.lock:
             if session_token not in self.sessions:
                 return False
             
-            session = self.sessions[session_token]
-            peer_id = f"{peer_ip}:{peer_port}"
-            
-            peer_info = {
-                'peer_id': peer_id,
+            username = self.sessions[session_token]['username']
+            self.active_peers[session_token] = {
+                'username': username,
                 'ip': peer_ip,
                 'port': peer_port,
-                'username': session['username'],
-                'channels': [],
-                'last_seen': time.time()
+                'registered_at': time.time()
             }
             
-            # Cập nhật peer info vào session
-            session['peer_info'] = peer_info
-            
-            # Lưu vào active peers list
-            self.active_peers[peer_id] = peer_info
-            
-            print(f"[SessionManager] Peer registered: {peer_id} (user: {session['username']})")
+            print(f"[SessionManager] Peer registered: {username} @ {peer_ip}:{peer_port}")
             return True
+    
+    def get_all_peers(self):
+        """
+        Get all active peers 
+        
+        :return: List of peers
+        """
+        with self.lock:
+            peers = []
+            for session_token, peer_info in self.active_peers.items():
+                if session_token in self.sessions:
+                    peers.append({
+                        'username': peer_info['username'],
+                        'ip': peer_info['ip'],
+                        'port': peer_info['port'],
+                        'registered_at': peer_info['registered_at']
+                    })
+            print(f"[SessionManager] Get all peers: {len(peers)} active")
+
+        return peers
+    
+    
+    
+    
     
     def get_peer_list(self, session_token):
         """Lấy danh sách peers đang active (cho get-list API)"""

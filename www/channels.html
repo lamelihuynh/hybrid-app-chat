@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Channels - bksysnet@hcmut</title>
+    <meta charset="utf-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info span {
+            font-size: 14px;
+        }
+        
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* Layout */
+        .main-content {
+            display: flex;
+            height: calc(100vh - 140px);
+        }
+        
+        /* Sidebar - Channel List */
+        .sidebar {
+            width: 300px;
+            background: #f7f7f7;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .create-channel-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .create-channel-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .btn-create {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-create:hover {
+            background: #5568d3;
+        }
+        
+        .channel-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .channel-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .channel-item:hover {
+            background: #e8eaf6;
+        }
+        
+        .channel-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #5568d3;
+        }
+        
+        .channel-name {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 3px;
+        }
+        
+        .channel-info {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .channel-item.active .channel-info {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        
+        .chat-header {
+            padding: 20px 30px;
+            background: #fff;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .channel-members {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+            background: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .message-author {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 14px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .message-content {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            max-width: 70%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-wrap: break-word;
+        }
+        
+        .message.own .message-content {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+        }
+        
+        .message.own .message-author {
+            color: #764ba2;
+        }
+        
+        /* Message Input */
+        .message-input-container {
+            padding: 20px 30px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .message-input-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .message-input:focus {
+            border-color: #667eea;
+        }
+        
+        .btn-send {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-send:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+        
+        .btn-send:active {
+            transform: translateY(0);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state-text {
+            font-size: 18px;
+        }
+        
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .notification.success {
+            border-left: 4px solid #4caf50;
+        }
+        
+        .notification.error {
+            border-left: 4px solid #f44336;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>💬 WeApRous Chat</h1>
+            <div class="user-info">
+                <span>👤 <strong id="currentUser">Loading...</strong></span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar - Channels -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>📂 Channels</h2>
+                    <form class="create-channel-form" id="createChannelForm">
+                        <input 
+                            type="text" 
+                            id="newChannelName" 
+                            placeholder="New channel name..." 
+                            required
+                        >
+                        <button type="submit" class="btn-create">Create</button>
+                    </form>
+                </div>
+                
+                <div class="channel-list" id="channelList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading channels...
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-text">Select a channel to start chatting</div>
+                </div>
+                
+                <div id="chatContainer" style="display: none; flex-direction: column; flex: 1;">
+                    <div class="chat-header">
+                        <div>
+                            <h2 id="currentChannelName">#general</h2>
+                            <div class="channel-members" id="channelMembers">
+                                👥 0 members
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                    
+                    <div class="message-input-container">
+                        <form class="message-input-form" id="messageForm">
+                            <input 
+                                type="text" 
+                                class="message-input" 
+                                id="messageInput" 
+                                placeholder="Type a message..." 
+                                required
+                            >
+                            <button type="submit" class="btn-send">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Global state
+        let currentUsername = '';
+        let currentChannel = null;
+        let channels = [];
+        let messagePollingInterval = null;
+        
+        // Helper functions
+        function parseResponse(data) {
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    console.error('Parse error:', e);
+                    return null;
+                }
+            }
+            
+            if (data.body && typeof data.body === 'string') {
+                try {
+                    return JSON.parse(data.body);
+                } catch (e) {
+                    console.error('Parse body error:', e);
+                    return data;
+                }
+            }
+            
+            return data;
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Check login status
+        window.onload = function() {
+            const username = localStorage.getItem('username');
+            const token = localStorage.getItem('session_token');
+            
+            if (!username || !token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            currentUsername = username;
+            document.getElementById('currentUser').textContent = username;
+            
+            // Set cookie
+            document.cookie = `session_token=${token}; path=/; max-age=3600`;
+            
+            // Load channels
+            loadChannels();
+        };
+        
+        // Create channel
+        document.getElementById('createChannelForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const channelName = document.getElementById('newChannelName').value.trim();
+            
+            if (!channelName) {
+                showNotification('Please enter a channel name', 'error');
+                return;
+            }
+            
+            fetch('/create-channel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ channel_name: channelName }),
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(text => {
+                const data = parseResponse(text);
+                console.log('Create channel response:', data);
+                
+                if (data && data.status === 'success') {
+                    showNotification(`Channel "${channelName}" created!`, 'success');
+                    document.getElementById('newChannelName').value = '';
+                    loadChannels();
+                } else {
+                    showNotification(data?.message || 'Failed to create channel', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Create channel error:', error);
+                showNotification('Connection error', 'error');
+            });
+        });
+        
+        // Load channels
+        function loadChannels() {
+            fetch('/list-channels', {
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(text => {
+                const data = parseResponse(text);
+                console.log('Channels:', data);
+                
+                if (data && data.channels) {
+                    channels = data.channels;
+                    renderChannels();
+                } else {
+                    document.getElementById('channelList').innerHTML = 
+                        '<div class="loading">No channels available</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Load channels error:', error);
+                document.getElementById('channelList').innerHTML = 
+                    '<div class="loading">Error loading channels</div>';
+            });
+        }
+        
+        // Render channels
+        function renderChannels() {
+            const channelList = document.getElementById('channelList');
+            
+            if (channels.length === 0) {
+                channelList.innerHTML = '<div class="loading">No channels yet. Create one!</div>';
+                return;
+            }
+            
+            channelList.innerHTML = channels.map(channel => `
+                <div class="channel-item ${currentChannel?.name === channel.name ? 'active' : ''}" 
+                     onclick="selectChannel('${channel.name}')">
+                    <div class="channel-name"># ${channel.name}</div>
+                    <div class="channel-info">
+                        Created by ${channel.creator} • ${channel.members_count} members
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Select channel
+        function selectChannel(channelName) {
+            // Join channel first
+            fetch('/join-channel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ channel_name: channelName }),
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(text => {
+                const data = parseResponse(text);
+                console.log('Join channel response:', data);
+                
+                if (data && data.status === 'success') {
+                    currentChannel = data.channel;
+                    
+                    // Update UI
+                    document.getElementById('emptyState').style.display = 'none';
+                    document.getElementById('chatContainer').style.display = 'flex';
+                    document.getElementById('currentChannelName').textContent = `# ${channelName}`;
+                    document.getElementById('channelMembers').textContent = 
+                        `👥 ${data.channel.members.length} members: ${data.channel.members.join(', ')}`;
+                    
+                    // Render channels to update active state
+                    renderChannels();
+                    
+                    // Load messages
+                    loadMessages(channelName);
+                    
+                    // Start polling for new messages
+                    startMessagePolling(channelName);
+                } else {
+                    showNotification(data?.message || 'Failed to join channel', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Join channel error:', error);
+                showNotification('Connection error', 'error');
+            });
+        }
+        
+        // Load messages
+        function loadMessages(channelName) {
+            // TODO: Implement get-messages API
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = `
+                <div class="message">
+                    <div class="message-header">
+                        <span class="message-author">System</span>
+                        <span class="message-time">${formatTime(Date.now()/1000)}</span>
+                    </div>
+                    <div class="message-content">
+                        Welcome to #${channelName}! Start chatting by sending a message below.
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Send message
+        document.getElementById('messageForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentChannel) {
+                showNotification('Please select a channel first', 'error');
+                return;
+            }
+            
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            fetch('/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel_name: currentChannel.name,
+                    message: message
+                }),
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(text => {
+                const data = parseResponse(text);
+                console.log('Send message response:', data);
+                
+                if (data && data.status === 'success') {
+                    messageInput.value = '';
+                    
+                    // Add message to UI immediately
+                    addMessageToUI(currentUsername, message, data.timestamp);
+                    
+                    // Scroll to bottom
+                    const container = document.getElementById('messagesContainer');
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    showNotification(data?.message || 'Failed to send message', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Send message error:', error);
+                showNotification('Connection error', 'error');
+            });
+        });
+        
+        // Add message to UI
+        function addMessageToUI(author, content, timestamp) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const isOwn = author === currentUsername;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwn ? 'own' : ''}`;
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-author">${author}</span>
+                    <span class="message-time">${formatTime(timestamp)}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+        }
+        
+        // Start polling for new messages
+        function startMessagePolling(channelName) {
+            // Clear previous interval
+            if (messagePollingInterval) {
+                clearInterval(messagePollingInterval);
+            }
+            
+            // TODO: Implement polling when get-messages API is ready
+            // messagePollingInterval = setInterval(() => {
+            //     loadMessages(channelName);
+            // }, 3000);
+        }
+        
+        // Logout
+        function logout() {
+            localStorage.clear();
+            document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>
