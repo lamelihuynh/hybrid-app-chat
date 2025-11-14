@@ -121,7 +121,7 @@ No external packages required - uses only Python standard library:
 
 ### 1. Clone/Download the Repository
 ```bash
-cd /Users/huynhnhatlinh0305/Downloads/CO3094-weaprous
+cd ./yourdirection
 ```
 
 ### 2. Verify Python Installation
@@ -828,38 +828,11 @@ curl -X GET http://127.0.0.1:9001/get-user-info \
   -H "Cookie: session_token=YOUR_TOKEN"
 ```
 
-## 📝 Course Information
-
-**Course:** CO3094 - Computer Networks  
-**Institution:** Ho Chi Minh City University of Technology (HCMUT)  
-**Instructor:** Dr. Pham Dinh Nguyen  
-**Year:** 2025
-
-### Learning Objectives
-
-This project demonstrates:
-- ✅ Socket programming and TCP/IP networking
-- ✅ HTTP protocol implementation
-- ✅ RESTful API design
-- ✅ Session management and authentication
-- ✅ Multi-threaded server architecture
-- ✅ P2P network communication
-- ✅ Reverse proxy and load balancing
 
 ## 📧 Contact
 
-**Developer:** Huỳnh Nhật Linh  
-**Student ID:** [Your Student ID]  
+**Developer:** Huỳnh Nhật Linh   
 **Email:** gianglinh217@gmail.com
-
-### Reporting Issues
-
-Please include in your report:
-- ✉️ Description of the issue
-- 📝 Steps to reproduce
-- 💻 Error messages and stack traces
-- 🖥️ Operating system and Python version
-- 📸 Screenshots (if applicable)
 
 ### Contributing
 
