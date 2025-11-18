@@ -1,3 +1,4 @@
+<!-- filepath: /Users/huynhnhatlinh0305/Downloads/CO3094-weaprous/www/login.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -59,12 +60,30 @@
             font-weight: bold;
             color: #555;
         }
+        /* ⭐ THÊM STYLES CHO P2P STATUS */
+        .p2p-status {
+            background: #E3F2FD;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 0.9em;
+            display: none;
+        }
+        .p2p-status.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
 <div class="login-container">
     <h1>Login</h1>
     <div id="message" class="message"></div>
+    
+    <!-- ⭐ THÊM P2P STATUS INDICATOR -->
+    <div id="p2pStatus" class="p2p-status">
+        <span id="p2pStatusText">🔄 Initializing P2P Agent...</span>
+    </div>
     
     <form id="loginForm" method="POST" action="/login">
         <label for="username">Username:</label>
@@ -80,30 +99,37 @@
         <a href="index.html">← Back to Home</a>
     </p>
 </div>
+
+<!-- ⭐ THÊM P2P AGENT SCRIPT -->
+<script src="js/p2p-agent.js"></script>
+
 <script>
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         const messageDiv = document.getElementById('message');
+        const p2pStatusDiv = document.getElementById('p2pStatus');
+        const p2pStatusText = document.getElementById('p2pStatusText');
         
         messageDiv.textContent = 'Logging in...';
         messageDiv.className = 'message';
         messageDiv.style.display = 'block';
         
-        fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password
-            }),
-            credentials: 'include'
-        })
-        .then(response => {
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                }),
+                credentials: 'include'
+            });
+            
             console.log('[Login] Response status:', response.status);
             console.log('[Login] Response headers:');
             
@@ -116,9 +142,7 @@
                 console.log(`  ${key}: ${value}`);
             });
             
-            return response.text();
-        })
-        .then(text => {
+            const text = await response.text();
             console.log('[Login] Raw response:', text);
             
             let data;
@@ -145,7 +169,7 @@
             }
             
             if (bodyData.status === 'success') {
-                messageDiv.textContent = 'Login successful! Redirecting...';
+                messageDiv.textContent = 'Login successful!';
                 messageDiv.className = 'message success';
                 
                 // ✅ LƯU TOKEN THỦ CÔNG VÀO COOKIE
@@ -162,25 +186,63 @@
                 localStorage.setItem('session_token', token);
                 localStorage.setItem('username', bodyData.user.username);
                 
-                // Redirect sau 1 giây
-                setTimeout(() => {
-                    console.log('[Login] Redirecting to dashboard...');
-                    window.location.href = '/dashboard.html';
-                }, 1000);
+                // ⭐ TỰ ĐỘNG KHỞI ĐỘNG P2P AGENT
+                p2pStatusDiv.classList.add('active');
+                p2pStatusText.textContent = '🔄 Starting P2P Agent...';
+                
+                const trackers = [
+                    'http://127.0.0.1:9001',
+                    'http://127.0.0.1:9002',  // Backup tracker (optional)
+                    'http://127.0.0.1:9003'   // Backup tracker (optional)
+                ];
+                
+                console.log('[Login] Initializing P2P Agent...');
+                
+                try {
+                    // Initialize P2P Agent
+                    const p2pSuccess = await initializeP2PAgent(bodyData.user.username, trackers);
+                    
+                    if (p2pSuccess) {
+                        console.log('[Login] P2P Agent started successfully');
+                        p2pStatusText.textContent = '✓ P2P Agent Running';
+                        p2pStatusText.style.color = '#4CAF50';
+                        
+                        // Redirect sau 1.5 giây
+                        setTimeout(() => {
+                            console.log('[Login] Redirecting to dashboard...');
+                            window.location.href = '/dashboard.html';
+                        }, 1500);
+                    } else {
+                        console.warn('[Login] P2P Agent failed to start, but continuing...');
+                        p2pStatusText.textContent = '⚠ P2P Agent failed (will retry in dashboard)';
+                        p2pStatusText.style.color = '#FF9800';
+                        
+                        // Vẫn redirect, agent sẽ retry ở dashboard
+                        setTimeout(() => {
+                            window.location.href = '/dashboard.html';
+                        }, 2000);
+                    }
+                } catch (p2pError) {
+                    console.error('[Login] P2P Agent error:', p2pError);
+                    p2pStatusText.textContent = '⚠ P2P Agent error (will retry in dashboard)';
+                    p2pStatusText.style.color = '#FF9800';
+                    
+                    // Vẫn redirect ngay cả khi P2P fail
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 2000);
+                }
             } else {
                 messageDiv.textContent = bodyData.message || 'Login failed!';
                 messageDiv.className = 'message error';
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('[Login] Error:', error);
             messageDiv.textContent = 'Connection error. Please try again.';
             messageDiv.className = 'message error';
-        });
+        }
     });
-
-    
-
 </script>
+
 </body>
 </html>

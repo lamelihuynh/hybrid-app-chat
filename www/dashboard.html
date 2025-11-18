@@ -6,7 +6,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;  /* ⭐ TĂNG WIDTH */
             margin: 50px auto;
             padding: 20px;
         }
@@ -42,6 +42,12 @@
         .btn-danger:hover {
             background-color: #da190b;
         }
+        .btn-primary {
+            background-color: #2196F3;
+        }
+        .btn-primary:hover {
+            background-color: #0b7dda;
+        }
         #userInfo {
             font-weight: bold;
             color: #4CAF50;
@@ -67,6 +73,125 @@
             max-height: 200px;
             overflow-y: auto;
         }
+        
+        /* ⭐ THÊM STYLES CHO P2P SECTION */
+        .p2p-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .p2p-section h2 {
+            color: white;
+            margin-top: 0;
+        }
+        
+        .p2p-status {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .peer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .peer-card {
+            background: white;
+            color: #333;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .peer-card.connected {
+            background: #e3f2fd;
+            border: 2px solid #2196F3;
+        }
+        
+        .peer-status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        
+        .peer-status-badge.online {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .peer-status-badge.connected {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .peer-status-badge.offline {
+            background: #999;
+            color: white;
+        }
+        
+        #p2pMessages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+        
+        .p2p-message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+        
+        .p2p-message.sent {
+            background: #667eea;
+            color: white;
+            text-align: right;
+            margin-left: 20%;
+        }
+        
+        .p2p-message.received {
+            background: white;
+            margin-right: 20%;
+        }
+        
+        .p2p-message .timestamp {
+            font-size: 0.7em;
+            opacity: 0.7;
+            margin-left: 10px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .input-group input,
+        .input-group select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.9);
+        }
+        
+        .input-group button {
+            padding: 8px 15px;
+        }
     </style>
 </head>
 <body>
@@ -90,20 +215,64 @@
     </div>
     
     <div class="section">
-        <h2>Active Peers</h2>
-        <button onclick="loadPeerList()" class="btn">Refresh Peer List</button>
+        <h2>Active Peers (Tracker List)</h2>
+        <button onclick="loadPeerListFromTracker()" class="btn">Refresh Peer List</button>
         <ul id="peerList"></ul>
     </div>
-    <!-- Thêm button vào section -->
+    
+    <!-- ⭐ THÊM P2P SECTION VÀO ĐÂY (SAU ACTIVE PEERS) -->
+    <div class="p2p-section">
+        <h2>🔗 P2P Communication (Direct Connection)</h2>
+        
+        <div class="p2p-status">
+            <strong>P2P Agent Status:</strong> 
+            <span id="agentStatus">Checking...</span>
+        </div>
+        
+        <h3>Connected Peers (P2P Direct)</h3>
+        <button onclick="refreshP2PPeers()" class="btn">🔄 Refresh P2P Peers</button>
+        
+        <div id="p2pPeerGrid" class="peer-grid">
+            <p>Loading P2P peers...</p>
+        </div>
+        
+        <h3>💬 P2P Chat</h3>
+        <div id="p2pMessages">
+            <p style="text-align: center; opacity: 0.7;">Connect to a peer to start chatting</p>
+        </div>
+        
+        <div class="input-group">
+            <select id="targetPeer">
+                <option value="">Select peer...</option>
+            </select>
+            <input type="text" id="messageInput" placeholder="Type message..." disabled>
+            <button onclick="sendP2PMessage()" class="btn btn-primary" disabled id="sendBtn">
+                Send (P2P Direct)
+            </button>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="broadcastInput" placeholder="Broadcast message to all connected peers...">
+            <button onclick="broadcastP2PMessage()" class="btn btn-primary">
+                📢 Broadcast (P2P)
+            </button>
+        </div>
+    </div>
+    <!-- ⭐ KẾT THÚC P2P SECTION -->
+    
     <div class="section">
         <h2>Quick Actions</h2>
         <a href="/channels.html" class="btn">📂 Open Channels</a>
-        <button onclick="loadPeerList()" class="btn">🔄 Refresh Peer List</button>
+        <button onclick="loadPeerListFromTracker()" class="btn">🔄 Refresh Peer List</button>
     </div>
+    
     <div class="section">
         <button onclick="logout()" class="btn btn-danger">Logout</button>
     </div>
 </div>
+
+<!-- ⭐ THÊM P2P AGENT SCRIPT VÀO ĐÂY (TRƯỚC </body>) -->
+<script src="js/p2p-agent.js"></script>
 
 <script>
     const debugDiv = document.getElementById('debugInfo');
@@ -120,7 +289,6 @@
         const cookies = document.cookie;
         addDebug(`Cookies: ${cookies || 'NONE'}`);
         
-        // Check for session_token
         const hasSessionToken = cookies.includes('session_token=');
         addDebug(`Has session_token: ${hasSessionToken}`);
         
@@ -134,11 +302,10 @@
         return hasSessionToken;
     }
     
-    // Check if user is logged in
-    window.onload = function() {
+    // ⭐ KHỞI TẠO P2P AGENT KHI PAGE LOAD
+    window.onload = async function() {
         addDebug('Page loaded, checking session...');
         
-        // Check if cookies exist
         if (!checkCookies()) {
             addDebug('ERROR: No session cookie found!');
             addDebug('Redirecting to login in 3 seconds...');
@@ -148,19 +315,17 @@
             return;
         }
         
-        // Try to get user info
         addDebug('Fetching /get-user-info...');
         
         fetch('/get-user-info', {
             method: 'GET',
-            credentials: 'include', // IMPORTANT: Include cookies
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json'
             }
         })
         .then(response => {
             addDebug(`Response status: ${response.status}`);
-            addDebug(`Response headers: ${JSON.stringify([...response.headers])}`);
             
             if (response.status === 401) {
                 addDebug('UNAUTHORIZED - Invalid session');
@@ -170,19 +335,13 @@
                 return null;
             }
             
-            if (response.status === 404) {
-                addDebug('ERROR: /get-user-info API not found!');
-                return null;
-            }
-            
-            return response.text(); // Get raw response first
+            return response.text();
         })
         .then(text => {
             if (!text) return;
             
             addDebug(`Raw response: ${text.substring(0, 100)}...`);
             
-            // Try to parse JSON
             let data;
             try {
                 data = JSON.parse(text);
@@ -191,14 +350,10 @@
                 return;
             }
             
-            addDebug(`Parsed data: ${JSON.stringify(data)}`);
-            
-            // Handle nested JSON body
             let userData = data;
             if (data.body && typeof data.body === 'string') {
                 try {
                     userData = JSON.parse(data.body);
-                    addDebug(`Parsed body: ${JSON.stringify(userData)}`);
                 } catch (e) {
                     addDebug(`ERROR parsing body: ${e.message}`);
                 }
@@ -207,13 +362,11 @@
             if (userData && userData.username) {
                 addDebug(`SUCCESS: Logged in as ${userData.username}`);
                 document.getElementById('userInfo').textContent = userData.username;
+                
+                // ⭐ TỰ ĐỘNG KHỞI ĐỘNG P2P AGENT
+                initializeP2PAgentAfterLogin(userData.username);
             } else if (userData && userData.error) {
                 addDebug(`ERROR: ${userData.error}`);
-                setTimeout(() => {
-                    window.location.href = '/login.html';
-                }, 2000);
-            } else {
-                addDebug('ERROR: No username in response');
                 setTimeout(() => {
                     window.location.href = '/login.html';
                 }, 2000);
@@ -221,10 +374,221 @@
         })
         .catch(error => {
             addDebug(`FETCH ERROR: ${error.message}`);
-            addDebug(`Stack: ${error.stack}`);
-            alert('Session check failed! Check console.');
         });
     };
+    
+    // ⭐ HÀM KHỞI TẠO P2P AGENT
+    async function initializeP2PAgentAfterLogin(username) {
+        addDebug('[P2P] Initializing P2P Agent...');
+        
+        const trackers = [
+            'http://127.0.0.1:9001',
+            'http://127.0.0.1:9002',  // Backup
+            'http://127.0.0.1:9003'   // Backup
+        ];
+        
+        try {
+            if (!window.p2pAgent || !window.p2pAgent.started) {
+                const success = await initializeP2PAgent(username, trackers);
+                
+                if (success) {
+                    document.getElementById('agentStatus').textContent = '✓ Running';
+                    document.getElementById('agentStatus').style.color = '#4CAF50';
+                    addDebug('[P2P] Agent started successfully');
+                    
+                    // Register message handler
+                    window.p2pAgent.onMessage((fromUsername, message) => {
+                        displayP2PMessage(fromUsername, message.message, 'received');
+                    });
+                    
+                    // Listen for connection status
+                    window.addEventListener('p2p-connection-status', (event) => {
+                        const { username, status } = event.detail;
+                        updatePeerConnectionStatus(username, status);
+                    });
+                    
+                    // Load P2P peers
+                    await loadP2PPeerList();
+                } else {
+                    document.getElementById('agentStatus').textContent = '✗ Failed';
+                    document.getElementById('agentStatus').style.color = '#f44336';
+                    addDebug('[P2P] Agent failed to start');
+                }
+            }
+        } catch (error) {
+            addDebug(`[P2P] Error: ${error.message}`);
+            document.getElementById('agentStatus').textContent = '✗ Error';
+            document.getElementById('agentStatus').style.color = '#f44336';
+        }
+    }
+    
+    // ⭐ LOAD P2P PEER LIST
+    async function loadP2PPeerList() {
+        if (!window.p2pAgent) {
+            addDebug('[P2P] Agent not running');
+            return;
+        }
+        
+        addDebug('[P2P] Loading peer list...');
+        
+        const peers = await window.p2pAgent.getPeerList();
+        displayP2PPeerList(peers);
+    }
+    
+    // ⭐ DISPLAY P2P PEERS
+    function displayP2PPeerList(peers) {
+        const peerGrid = document.getElementById('p2pPeerGrid');
+        const targetPeerSelect = document.getElementById('targetPeer');
+        
+        if (peers.length === 0) {
+            peerGrid.innerHTML = '<p>No peers available for P2P connection</p>';
+            return;
+        }
+        
+        peerGrid.innerHTML = '';
+        targetPeerSelect.innerHTML = '<option value="">Select peer...</option>';
+        
+        const currentUsername = document.getElementById('userInfo').textContent;
+        
+        peers.forEach(peer => {
+            if (peer.username === currentUsername) return; // Skip self
+            
+            const peerCard = document.createElement('div');
+            peerCard.className = 'peer-card';
+            peerCard.id = `p2p-peer-${peer.username}`;
+            peerCard.innerHTML = `
+                <div>
+                    <strong>${peer.username}</strong>
+                    <span class="peer-status-badge online">Online</span>
+                </div>
+                <div style="font-size: 0.8em; color: #666; margin: 5px 0;">
+                    ${peer.ip}:${peer.port}
+                </div>
+                <button onclick="connectToPeerP2P('${peer.username}')" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.9em;">
+                    🔗 Connect P2P
+                </button>
+            `;
+            peerGrid.appendChild(peerCard);
+            
+            // Add to select
+            const option = document.createElement('option');
+            option.value = peer.username;
+            option.textContent = peer.username;
+            targetPeerSelect.appendChild(option);
+        });
+        
+        addDebug(`[P2P] Displayed ${peers.length} peer(s)`);
+    }
+    
+    // ⭐ CONNECT TO PEER (P2P)
+    async function connectToPeerP2P(username) {
+        if (!window.p2pAgent) {
+            alert('P2P Agent not running!');
+            return;
+        }
+        
+        addDebug(`[P2P] Connecting to ${username}...`);
+        
+        const success = await window.p2pAgent.connectToPeer(username);
+        
+        if (success) {
+            addDebug(`[P2P] Connected to ${username}`);
+            alert(`✓ Connected to ${username} via P2P!`);
+            
+            // Enable messaging
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('targetPeer').value = username;
+            
+            displayP2PMessage('System', `Connected to ${username}`, 'system');
+        } else {
+            addDebug(`[P2P] Failed to connect to ${username}`);
+            alert(`✗ Failed to connect to ${username}`);
+        }
+    }
+    
+    // ⭐ SEND P2P MESSAGE
+    function sendP2PMessage() {
+        const targetPeer = document.getElementById('targetPeer').value;
+        const message = document.getElementById('messageInput').value.trim();
+        
+        if (!targetPeer || !message) {
+            alert('Please select peer and enter message');
+            return;
+        }
+        
+        if (window.p2pAgent.sendToPeer(targetPeer, message)) {
+            displayP2PMessage('You', message, 'sent');
+            document.getElementById('messageInput').value = '';
+            addDebug(`[P2P] Message sent to ${targetPeer}`);
+        } else {
+            alert('Failed to send message. Not connected to peer.');
+            addDebug(`[P2P] Failed to send message to ${targetPeer}`);
+        }
+    }
+    
+    // ⭐ BROADCAST P2P MESSAGE
+    function broadcastP2PMessage() {
+        const message = document.getElementById('broadcastInput').value.trim();
+        
+        if (!message) {
+            alert('Please enter message to broadcast');
+            return;
+        }
+        
+        const count = window.p2pAgent.broadcastToPeers(message);
+        
+        if (count > 0) {
+            displayP2PMessage('You', `[Broadcast] ${message}`, 'sent');
+            document.getElementById('broadcastInput').value = '';
+            alert(`Broadcast sent to ${count} peer(s)`);
+            addDebug(`[P2P] Broadcast sent to ${count} peer(s)`);
+        } else {
+            alert('No connected peers to broadcast to');
+            addDebug('[P2P] No connected peers for broadcast');
+        }
+    }
+    
+    // ⭐ DISPLAY P2P MESSAGE
+    function displayP2PMessage(from, message, type) {
+        const messagesDiv = document.getElementById('p2pMessages');
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `p2p-message ${type}`;
+        messageDiv.innerHTML = `
+            <strong>${from}:</strong> ${message}
+            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+        `;
+        
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    // ⭐ UPDATE PEER CONNECTION STATUS
+    function updatePeerConnectionStatus(username, status) {
+        const peerCard = document.getElementById(`p2p-peer-${username}`);
+        if (!peerCard) return;
+        
+        const statusBadge = peerCard.querySelector('.peer-status-badge');
+        if (statusBadge) {
+            statusBadge.textContent = status;
+            statusBadge.className = `peer-status-badge ${status}`;
+        }
+        
+        if (status === 'connected') {
+            peerCard.classList.add('connected');
+        } else {
+            peerCard.classList.remove('connected');
+        }
+        
+        addDebug(`[P2P] ${username} status: ${status}`);
+    }
+    
+    // ⭐ REFRESH P2P PEERS
+    async function refreshP2PPeers() {
+        await loadP2PPeerList();
+        addDebug('[P2P] Peer list refreshed');
+    }
     
     // Submit peer info
     document.getElementById('submitInfoForm').addEventListener('submit', function(e) {
@@ -262,7 +626,7 @@
             
             if (responseData.status === 'success') {
                 messageDiv.innerHTML = '<p style="color: green;">✓ Peer info submitted!</p>';
-                loadPeerList();
+                loadPeerListFromTracker();
             } else {
                 messageDiv.innerHTML = `<p style="color: red;">✗ ${responseData.message}</p>`;
             }
@@ -273,9 +637,9 @@
         });
     });
     
-    // Load peer list
-    function loadPeerList() {
-        addDebug('Loading peer list...');
+    // Load peer list from tracker (existing function - renamed)
+    function loadPeerListFromTracker() {
+        addDebug('Loading peer list from tracker...');
         
         fetch('/get-list', {
             credentials: 'include'
@@ -284,63 +648,50 @@
         .then(text => {
             addDebug(`Peer list response: ${text}`);
             
-            // TODO: Parse and display peers
             let data; 
             try {
                 data = JSON.parse(text);
             } catch (e) {
                 addDebug(`ERROR parsing JSON: ${e.message}`);
-                    document.getElementById('peerList').innerHTML = '<li>Error parsing JSON</li>';
+                document.getElementById('peerList').innerHTML = '<li>Error parsing JSON</li>';
                 return;
             }
+            
             let responseData = data;
-
             if (data.body && typeof data.body === 'string') {
-            try {
-                responseData = JSON.parse(data.body);
-                addDebug(`Parsed body: ${JSON.stringify(responseData)}`);
-            } catch (e) {
-                addDebug(`ERROR parsing body: ${e.message}`);
-                document.getElementById('peerList').innerHTML = 
-                    '<li style="color: red;">Error parsing body</li>';
-                return;
+                try {
+                    responseData = JSON.parse(data.body);
+                } catch (e) {
+                    addDebug(`ERROR parsing body: ${e.message}`);
+                    document.getElementById('peerList').innerHTML = 
+                        '<li style="color: red;">Error parsing body</li>';
+                    return;
+                }
             }
-        }
             
             const peerList = document.getElementById('peerList');
-        if (responseData.status === 'success' && responseData.peers) {
-            if (responseData.peers.length === 0) {
-                peerList.innerHTML = '<li>No active peers online</li>';
-                addDebug('No peers found');
-                return;
-            }
-            
-            // Display peers
-            addDebug(`Found ${responseData.peers.length} peer(s)`);
-            
-            peerList.innerHTML = responseData.peers.map(peer => {
-                const registeredTime = new Date(peer.registered_at * 1000).toLocaleTimeString();
+            if (responseData.status === 'success' && responseData.peers) {
+                if (responseData.peers.length === 0) {
+                    peerList.innerHTML = '<li>No active peers online</li>';
+                    return;
+                }
                 
-                return `
-                    <li>
-                        <strong>${peer.username}</strong> - ${peer.ip}:${peer.port}
-                        <br>
-                        <small style="color: #666;">Registered at: ${registeredTime}</small>
-                        <br>
-                        <button onclick="addPeerToList('${peer.ip}', ${peer.port})" class="btn" style="padding: 5px 10px; margin-top: 5px;">
-                            ➕ Add to My List
-                        </button>
-                        <button onclick="connectToPeer('${peer.ip}', ${peer.port}, '${peer.username}')" class="btn" style="padding: 5px 10px; margin-top: 5px; background-color: #2196F3;">
-                            🔗 Connect P2P
-                        </button>
-                    </li>
-                `;
-            }).join('');
-            
-        } else {
-            peerList.innerHTML = `<li style="color: red;">Error: ${responseData.message || 'Unknown error'}</li>`;
-            addDebug(`ERROR: ${responseData.message || 'Unknown error'}`);
-        }
+                addDebug(`Found ${responseData.peers.length} peer(s)`);
+                
+                peerList.innerHTML = responseData.peers.map(peer => {
+                    const registeredTime = new Date(peer.registered_at * 1000).toLocaleTimeString();
+                    
+                    return `
+                        <li>
+                            <strong>${peer.username}</strong> - ${peer.ip}:${peer.port}
+                            <br>
+                            <small style="color: #666;">Registered at: ${registeredTime}</small>
+                        </li>
+                    `;
+                }).join('');
+            } else {
+                peerList.innerHTML = `<li style="color: red;">Error: ${responseData.message || 'Unknown error'}</li>`;
+            }
         })
         .catch(error => {
             addDebug(`Load peers error: ${error.message}`);
@@ -351,12 +702,30 @@
     function logout() {
         addDebug('Logging out...');
         
-        // Clear cookies client-side
+        // Stop P2P agent
+        if (window.p2pAgent) {
+            window.p2pAgent.stop();
+            addDebug('[P2P] Agent stopped');
+        }
+        
+        // Clear cookies
         document.cookie = 'session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         
-        // Redirect immediately
         window.location.href = '/login.html';
     }
+    
+    // Handle Enter key
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendP2PMessage();
+        }
+    });
+    
+    document.getElementById('broadcastInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            broadcastP2PMessage();
+        }
+    });
 </script>
 </body>
 </html>

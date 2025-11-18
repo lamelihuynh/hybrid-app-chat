@@ -610,11 +610,355 @@ def get_list(headers, body):
             })
         }
 
+# Thêm các API mới cho P2P signaling
+
+@app.route('/ping', methods=['GET'])
+def ping(headers, body):
+    """Health check for tracker"""
+    return {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"status": "ok"})
+    }
+
+@app.route('/heartbeat', methods=['POST'])
+def heartbeat(headers, body):
+    """Peer heartbeat to stay active"""
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error", "message": "Unauthorized"})
+            }
+        
+        # Update last seen timestamp
+        session = session_manager.get_session(session_token)
+        session['last_seen'] = __import__('time').time()
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "ok"})
+        }
+    except Exception as e:
+        print(f"[Heartbeat] Error: {e}")
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "error"})
+        }
+
+# Connection request queue (in-memory, should use Redis in production)
+connection_requests = {}  # {to_username: [requests]}
+connection_answers = {}   # {from_username: answer}
+
+@app.route('/send-connection-offer', methods=['POST'])
+def send_connection_offer(headers, body):
+    """Send WebRTC offer to peer via signaling"""
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error"})
+            }
+        
+        session = session_manager.get_session(session_token)
+        from_username = session['username']
+        
+        to_username = body.get('to_username')
+        offer = body.get('offer')
+        
+        if not to_username or not offer:
+            return {
+                "status": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error", "message": "Missing parameters"})
+            }
+        
+        # Store connection request
+        if to_username not in connection_requests:
+            connection_requests[to_username] = []
+        
+        connection_requests[to_username].append({
+            'from_username': from_username,
+            'offer': offer,
+            'timestamp': __import__('time').time()
+        })
+        
+        print(f"[Signaling] Connection offer from {from_username} to {to_username}")
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "success"})
+        }
+    except Exception as e:
+        print(f"[SendOffer] Error: {e}")
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "error"})
+        }
+
+@app.route('/get-connection-requests', methods=['GET'])
+def get_connection_requests(headers, body):
+    """Get pending connection requests"""
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error"})
+            }
+        
+        session = session_manager.get_session(session_token)
+        username = session['username']
+        
+        # Get requests for this user
+        requests = connection_requests.get(username, [])
+        
+        # Clear requests after retrieving
+        if username in connection_requests:
+            del connection_requests[username]
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"requests": requests})
+        }
+    except Exception as e:
+        print(f"[GetRequests] Error: {e}")
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "error"})
+        }
+
+@app.route('/send-connection-answer', methods=['POST'])
+def send_connection_answer(headers, body):
+    """Send WebRTC answer back to peer"""
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error"})
+            }
+        
+        to_username = body.get('to_username')
+        answer = body.get('answer')
+        
+        if not to_username or not answer:
+            return {
+                "status": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error"})
+            }
+        
+        # Store answer
+        connection_answers[to_username] = answer
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "success"})
+        }
+    except Exception as e:
+        print(f"[SendAnswer] Error: {e}")
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "error"})
+        }
+
+@app.route('/get-connection-answer', methods=['GET'])
+def get_connection_answer(headers, body):
+    """Get connection answer from peer"""
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "error"})
+            }
+        
+        session = session_manager.get_session(session_token)
+        username = session['username']
+        
+        # Get answer
+        answer = connection_answers.get(username)
+        
+        if answer:
+            del connection_answers[username]
+        
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"answer": answer})
+        }
+    except Exception as e:
+        print(f"[GetAnswer] Error: {e}")
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "error"})
+        }
+
 @app.route('/connect-peer', methods=['POST'])
 def connect_peer(headers, body):
-    print(f"[MyAPI] Connecting to peer: {body}")
-    # TODO: Xử lý logic kết nối peer
-    return 
+    """
+    Get peer info for P2P connection
+    This is CLIENT-SERVER communication to get peer address
+    """
+    print("[ConnectPeer] Request received")
+    
+    try:
+        cookie = headers.get("cookie", "")
+        session_token = None
+        
+        if cookie:
+            for item in cookie.split(";"):
+                item = item.strip()
+                if item.startswith("session_token="):
+                    session_token = item.split("=")[1]
+                    break
+        
+        if not session_token or not session_manager.validate_session(session_token):
+            return {
+                "status": 401,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Unauthorized - Invalid session"
+                })
+            }
+        
+        session = session_manager.get_session(session_token)
+        current_username = session['username']
+        
+        target_username = body.get("target_username")
+        
+        if not target_username:
+            return {
+                "status": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "target_username is required"
+                })
+            }
+        
+        if target_username == current_username:
+            return {
+                "status": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": "Cannot connect to yourself"
+                })
+            }
+        
+        # Find target peer
+        all_peers = session_manager.get_all_peers()
+        target_peer = None
+        
+        for peer in all_peers:
+            if peer['username'] == target_username:
+                target_peer = peer
+                break
+        
+        if not target_peer:
+            return {
+                "status": 404,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": f"Peer '{target_username}' not found or offline"
+                })
+            }
+        
+        print(f"[ConnectPeer] {current_username} requesting connection to {target_username}")
+        
+        # Return peer info for P2P connection
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "success",
+                "message": f"Peer '{target_username}' found",
+                "peer": {
+                    "username": target_peer['username'],
+                    "ip": target_peer['ip'],
+                    "port": target_peer['port']
+                }
+            })
+        }
+        
+    except Exception as e:
+        print(f"[ConnectPeer] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return {
+            "status": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({
+                "status": "error",
+                "message": "Internal server error"
+            })
+        }
 
 @app.route('/broadcast-peer', methods=['POST'])
 def broadcast_peer(headers, body):

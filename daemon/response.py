@@ -153,37 +153,56 @@ class Response():
         # Processing mime_type based on main_type and sub_type
         main_type, sub_type = mime_type.split('/', 1)
         print("[Response] processing MIME main_type={} sub_type={}".format(main_type,sub_type))
+        
         if main_type == 'text':
             self.headers['Content-Type']='text/{}'.format(sub_type)
             if sub_type == 'plain' or sub_type == 'css':
                 base_dir = BASE_DIR+"static/"
             elif sub_type == 'html':
                 base_dir = BASE_DIR+"www/"
+            elif sub_type == 'csv':
+                base_dir = BASE_DIR+"static/"
+            elif sub_type == 'xml':
+                base_dir = BASE_DIR+"static/"
             else:
-                handle_text_other(sub_type)
+                # Default for other text types
+                base_dir = BASE_DIR+"static/"
+                
         elif main_type == 'image':
             base_dir = BASE_DIR+"static/"
             self.headers['Content-Type']='image/{}'.format(sub_type)
+            
         elif main_type == 'application':
-            base_dir = BASE_DIR+"apps/Hybridapi"
             self.headers['Content-Type']='application/{}'.format(sub_type)
-        #
-        #  TODO: process other mime_type
-        #        application/xml       
-        #        application/zip
-        #        ...
-        #        text/csv
-        #        text/xml
-        #        ...
-        #        video/mp4 
-        #        video/mpeg
-        #        ...
-        #
+            
+            # ⭐ THÊM LOGIC CHO JAVASCRIPT VÀ CÁC APPLICATION KHÁC
+            if sub_type == 'javascript':
+                # JavaScript files should be served from www/
+                base_dir = BASE_DIR+"www/"
+            elif sub_type == 'json':
+                base_dir = BASE_DIR+"www/"
+            elif sub_type == 'xml':
+                base_dir = BASE_DIR+"static/"
+            elif sub_type == 'zip':
+                base_dir = BASE_DIR+"static/"
+            elif sub_type == 'pdf':
+                base_dir = BASE_DIR+"static/"
+            else:
+                # API endpoints và backend apps
+                base_dir = BASE_DIR+"apps/Hybridapi"
+                
+        elif main_type == 'video':
+            base_dir = BASE_DIR+"static/"
+            self.headers['Content-Type']='video/{}'.format(sub_type)
+            
+        elif main_type == 'audio':
+            base_dir = BASE_DIR+"static/"
+            self.headers['Content-Type']='audio/{}'.format(sub_type)
+            
         else:
-            raise ValueError("Invalid MEME type: main_type={} sub_type={}".format(main_type,sub_type))
+            raise ValueError("Invalid MIME type: main_type={} sub_type={}".format(main_type,sub_type))
 
         return base_dir
-
 
     def build_content(self, path, base_dir):
         """

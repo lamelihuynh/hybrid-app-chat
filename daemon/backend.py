@@ -39,6 +39,10 @@ Usage Example:
 >>> create_backend("127.0.0.1", 9000, routes={})
 
 """
+import asyncio
+import websockets 
+from daemon.websocket_handler import WebSocketHandler
+
 
 import socket
 import threading
@@ -51,6 +55,47 @@ from .dictionary import CaseInsensitiveDict
 thread_counter = 0
 thread_lock = threading.Lock()
 
+ws_handler = None
+ws_server_task = None
+
+def start_websocket_server(host, ws_port):
+    """
+    Start WebSocket server in asyncio event loop
+    
+    :param host (str): Host IP address
+    :param ws_port (int): WebSocket port number
+    """
+    global ws_handler, ws_server_task
+    
+    try:
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Import session manager
+        from daemon.session import session_manager
+        
+        # Create WebSocket handler
+        ws_handler = WebSocketHandler(session_manager)
+        
+        # Start WebSocket server
+        async def serve():
+            async with websockets.serve(
+                ws_handler.handle_client,
+                host,
+                ws_port,
+                ping_interval=30,
+                ping_timeout=10
+            ):
+                print(f"[WebSocket] Server running on ws://{host}:{ws_port}")
+                await asyncio.Future()  # Run forever
+        
+        loop.run_until_complete(serve())
+        
+    except Exception as e:
+        print(f"[WebSocket] Server error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_client(ip, port, conn, addr, routes):
     """
@@ -97,6 +142,18 @@ def run_backend(ip, port, routes):
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((ip, port))
         server.listen(50)
+
+
+        ws_port = port + 100  # WebSocket port = HTTP port + 100
+        
+        ws_thread = threading.Thread(
+            target=start_websocket_server,
+            args=(ip, ws_port),
+            daemon=True,
+            name="WebSocketThread"
+        )
+        ws_thread.start()
+        
 
         print("[Backend] Listening on port {}".format(port))
         if routes != {}:
